@@ -1,18 +1,17 @@
 using InvoicePdf.WebAPI.Application.Abstractions;
-using Microsoft.Extensions.Options;
+using InvoicePdf.WebAPI.Application.Models;
 using PuppeteerPagePool.Abstractions;
 using PuppeteerSharp;
 
 namespace InvoicePdf.WebAPI.Infrastructure.Pdf;
 
-public sealed class PuppeteerPagePoolPdfGenerator(IPagePool pagePool, IOptions<PdfRenderOptions> options) : IPdfGenerator
+public sealed class PuppeteerPagePoolPdfGenerator(IPagePool pagePool) : IPdfGenerator
 {
     private readonly IPagePool _pagePool = pagePool;
-    private readonly PdfRenderOptions _options = options.Value;
 
-    public async Task<byte[]> GenerateAsync(string html, CancellationToken cancellationToken = default)
+    public async Task<byte[]> GenerateAsync(string html, PdfPageFormat pageFormat, CancellationToken cancellationToken = default)
     {
-        var pageSize = ResolvePageSize(_options.PageFormat);
+        var pageSize = ResolvePageSize(pageFormat);
 
         return await _pagePool.ExecuteAsync(async (page, token) =>
         {
@@ -29,11 +28,11 @@ public sealed class PuppeteerPagePoolPdfGenerator(IPagePool pagePool, IOptions<P
         }, cancellationToken);
     }
 
-    private static (string Width, string Height) ResolvePageSize(string pageFormat)
+    private static (string Width, string Height) ResolvePageSize(PdfPageFormat pageFormat)
     {
-        return pageFormat.ToUpperInvariant() switch
+        return pageFormat switch
         {
-            "LETTER" => ("8.5in", "11in"),
+            PdfPageFormat.Letter => ("8.5in", "11in"),
             _ => ("210mm", "297mm")
         };
     }

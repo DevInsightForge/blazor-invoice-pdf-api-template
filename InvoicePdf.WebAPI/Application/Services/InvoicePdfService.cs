@@ -1,5 +1,6 @@
 using InvoicePdf.Templates.Models;
 using InvoicePdf.WebAPI.Application.Abstractions;
+using InvoicePdf.WebAPI.Application.Models;
 
 namespace InvoicePdf.WebAPI.Application.Services;
 
@@ -12,11 +13,11 @@ public sealed class InvoicePdfService(
     private readonly IInvoiceHtmlBuilder _invoiceHtmlBuilder = invoiceHtmlBuilder;
     private readonly IPdfGenerator _pdfGenerator = pdfGenerator;
 
-    public async Task<(byte[] Pdf, string FileName)> GenerateAsync(CancellationToken cancellationToken)
+    public async Task<(byte[] Pdf, string FileName)> GenerateAsync(PdfPageFormat pageFormat, CancellationToken cancellationToken)
     {
         var document = _invoiceDocumentFactory.Create();
         var html = await _invoiceHtmlBuilder.BuildAsync(document, cancellationToken);
-        var pdf = await _pdfGenerator.GenerateAsync(html, cancellationToken);
+        var pdf = await _pdfGenerator.GenerateAsync(html, pageFormat, cancellationToken);
         return (pdf, BuildFileName(document));
     }
 

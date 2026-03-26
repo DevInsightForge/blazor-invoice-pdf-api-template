@@ -1,4 +1,5 @@
 using InvoicePdf.WebAPI.Application.Services;
+using InvoicePdf.WebAPI.Application.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +18,14 @@ public static class InvoicePdfEndpoint
         return endpoints;
     }
 
-    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> GeneratePdfAsync(InvoicePdfService service, CancellationToken cancellationToken)
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> GeneratePdfAsync(
+        InvoicePdfService service,
+        CancellationToken cancellationToken,
+        [FromQuery] PdfPageFormat pageFormat = PdfPageFormat.A4)
     {
         try
         {
-            var (pdf, fileName) = await service.GenerateAsync(cancellationToken);
+            var (pdf, fileName) = await service.GenerateAsync(pageFormat, cancellationToken);
             return TypedResults.File(pdf, "application/pdf", fileName);
         }
         catch (Exception ex) when (IsPoolUnavailable(ex))

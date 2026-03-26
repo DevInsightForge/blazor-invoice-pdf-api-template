@@ -10,7 +10,7 @@
     <PackageReference Include="Bogus" Version="35.6.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.0.1" />
-    <PackageReference Include="PuppeteerPagePool" Version="0.1.1" />
+    <PackageReference Include="PuppeteerPagePool" Version="0.1.2" />
     <PackageReference Include="PuppeteerSharp" Version="24.39.0" />
   </ItemGroup>
 

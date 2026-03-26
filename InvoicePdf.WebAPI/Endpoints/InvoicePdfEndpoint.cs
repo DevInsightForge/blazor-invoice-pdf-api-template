@@ -1,8 +1,5 @@
 using InvoicePdf.WebAPI.Application.Services;
-using InvoicePdf.WebAPI.Application.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 
 namespace InvoicePdf.WebAPI.Endpoints;
 
@@ -13,19 +10,23 @@ public static class InvoicePdfEndpoint
         endpoints
             .MapGet("/api/invoices/pdf", GeneratePdfAsync)
             .WithName("GenerateRandomInvoicePdf")
-            .Produces(StatusCodes.Status200OK, contentType: "application/pdf");
+            .WithTags("Invoices")
+            .WithSummary("Generate invoice PDF")
+            .WithDescription("Generates a randomized invoice using the template and returns it as an A4 PDF.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
         return endpoints;
     }
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> GeneratePdfAsync(
         InvoicePdfService service,
-        CancellationToken cancellationToken,
-        [FromQuery] PdfPageFormat pageFormat = PdfPageFormat.A4)
+        CancellationToken cancellationToken)
     {
         try
         {
-            var (pdf, fileName) = await service.GenerateAsync(pageFormat, cancellationToken);
+            var (pdf, fileName) = await service.GenerateAsync(cancellationToken);
             return TypedResults.File(pdf, "application/pdf", fileName);
         }
         catch (Exception ex) when (IsPoolUnavailable(ex))

@@ -47,16 +47,11 @@ Development API docs (Swagger UI):
 
 ## Runtime Options
 
-Page format is selected per request via query param:
+PDF output is fixed to A4 format for consistent print layout.
 
-- `pageFormat=A4` (default)
-- `pageFormat=Letter`
-
-Examples:
+Endpoint:
 
 - `GET /api/invoices/pdf`
-- `GET /api/invoices/pdf?pageFormat=A4`
-- `GET /api/invoices/pdf?pageFormat=Letter`
 
 ## How It Operates
 
@@ -95,6 +90,6 @@ You can add more template components (e.g., receipt, quote, statement) and route
 
 ## Notes
 
-- Logo rendering supports optional image URL and embedded SVG fallback component.
+- Template intentionally renders without a logo block for a cleaner print-first layout.
 - Data generation currently uses `Bogus` for template/demo behavior.
 - Replace the random data factory with your real application data source when integrating into production systems.

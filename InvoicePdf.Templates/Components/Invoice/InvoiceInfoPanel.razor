@@ -1,50 +1,43 @@
 @using InvoicePdf.Templates.Models
 @using InvoicePdf.Templates.Utilities
 
-<section class="info-panel">
-    <section>
-        <h2 class="panel-title">Bill to</h2>
-        <p class="panel-lines">@BuildPartyBlock(BillTo)</p>
-    </section>
-
-    <section>
-        <h2 class="panel-title">Ship to</h2>
-        @if (ShipTo is not null)
+<section class="address-grid">
+    <div class="address-card">
+        <p class="card-label">@Formatter.SafeText(BillTo.CardLabel)</p>
+        <h2>@Formatter.SafeText(BillTo.Name)</h2>
+        @if (!string.IsNullOrWhiteSpace(BillTo.Attention))
         {
-            <p class="panel-lines">@BuildPartyBlock(ShipTo)</p>
+            <p>@BillTo.Attention</p>
         }
-        else
+        <p>@Formatter.SafeText(BillTo.AddressLine1)</p>
+        @if (!string.IsNullOrWhiteSpace(BillTo.AddressLine2))
         {
-            <p class="panel-lines">-</p>
+            <p>@BillTo.AddressLine2</p>
         }
-    </section>
+        <p>@Formatter.SafeText(BillTo.CityStatePostalCountry)</p>
+        @if (!string.IsNullOrWhiteSpace(BillTo.Email))
+        {
+            <p>@BillTo.Email</p>
+        }
+    </div>
 
-    <section>
-        <h2 class="panel-title">Details</h2>
-        <div class="details-lines">
-            <div class="details-row"><span class="details-label">Invoice no.</span><span>@Formatter.SafeText(Details.InvoiceNumber)</span></div>
-            <div class="details-row"><span class="details-label">Invoice date</span><span>@Formatter.FormatDate(Details.InvoiceDate)</span></div>
-            <div class="details-row"><span class="details-label">Terms</span><span>@Formatter.SafeText(Details.Terms)</span></div>
-            <div class="details-row"><span class="details-label">Due date</span><span>@Formatter.FormatDate(Details.DueDate)</span></div>
-        </div>
-    </section>
+    <div class="address-card">
+        <p class="card-label">@Formatter.SafeText(OrderDetails.CardLabel)</p>
+        <h2>@Formatter.SafeText(OrderDetails.Name)</h2>
+        @foreach (var row in OrderDetails.Lines)
+        {
+            <p>@Formatter.SafeText(row.Label): @Formatter.SafeText(row.Value)</p>
+        }
+    </div>
 </section>
 
 @code {
     [Parameter]
-    public required PartyInfoModel BillTo { get; set; }
+    public required BillToInfoModel BillTo { get; set; }
 
     [Parameter]
-    public PartyInfoModel? ShipTo { get; set; }
-
-    [Parameter]
-    public required InvoiceDetailsModel Details { get; set; }
+    public required OrderDetailsModel OrderDetails { get; set; }
 
     [Parameter]
     public required InvoiceDisplayFormatter Formatter { get; set; }
-
-    private string BuildPartyBlock(PartyInfoModel party)
-    {
-        return $"{Formatter.SafeText(party.Name)}\n{Formatter.FormatAddress(party.Address)}";
-    }
 }

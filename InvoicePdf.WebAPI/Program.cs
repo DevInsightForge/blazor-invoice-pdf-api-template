@@ -9,10 +9,10 @@ builder.Services.AddApiDocumentation();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
+
 if (app.Environment.IsDevelopment())
-{
     app.UseApiDocumentation();
-}
+
 app.MapInvoicePdfEndpoint();
 
 app.Run();

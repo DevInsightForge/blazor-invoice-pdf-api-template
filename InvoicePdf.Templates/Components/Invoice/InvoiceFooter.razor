@@ -1,0 +1,15 @@
+@using InvoicePdf.Templates.Models
+@using InvoicePdf.Templates.Utilities
+
+<footer class="invoice-footer">
+    <p>@Formatter.SafeText(Footer.Line1)</p>
+    <p>@Formatter.SafeText(Footer.Line2)</p>
+</footer>
+
+@code {
+    [Parameter]
+    public required InvoiceFooterModel Footer { get; set; }
+
+    [Parameter]
+    public required InvoiceDisplayFormatter Formatter { get; set; }
+}

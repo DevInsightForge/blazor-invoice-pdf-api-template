@@ -1,26 +1,26 @@
 @using InvoicePdf.Templates.Models
 @using InvoicePdf.Templates.Utilities
 
-<section>
-    <table class="items-table">
+<section class="table-wrap">
+    <table>
         <thead>
             <tr>
-                <th>Product/ service</th>
+                <th>Item</th>
                 <th>Description</th>
-                <th class="right">Quantity/ hrs</th>
-                <th class="right">Rate</th>
-                <th class="right">Amount</th>
+                <th class="num">Qty</th>
+                <th class="num">Unit</th>
+                <th class="num">Amount</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in Items)
             {
                 <tr>
-                    <td><span class="item-primary">@Formatter.SafeText(item.ProductOrService)</span></td>
-                    <td><span class="item-secondary">@Formatter.SafeText(item.Description)</span></td>
-                    <td class="right">@Formatter.FormatNumber(item.Quantity)</td>
-                    <td class="right">@Formatter.FormatCurrency(item.Rate)</td>
-                    <td class="right">@Formatter.FormatCurrency(InvoiceCalculations.GetLineAmount(item))</td>
+                    <td>@Formatter.SafeText(item.Id)</td>
+                    <td>@Formatter.SafeText(item.Description)</td>
+                    <td class="num">@Formatter.FormatNumber(item.Quantity)</td>
+                    <td class="num">@Formatter.FormatCurrency(item.UnitPrice)</td>
+                    <td class="num">@Formatter.FormatCurrency(InvoiceCalculations.GetLineAmount(item))</td>
                 </tr>
             }
         </tbody>

@@ -1,29 +1,30 @@
-@using InvoicePdf.Templates.Models
+﻿@using InvoicePdf.Templates.Models
 @using InvoicePdf.Templates.Utilities
 
 <header class="invoice-header">
-    <section>
-        @if (!string.IsNullOrWhiteSpace(Company.LogoUrl))
-        {
-            <div class="logo-box">
-                <img src="@Company.LogoUrl" alt="Company logo" />
-            </div>
-        }
-        else
-        {
-            <div class="logo-box">
-                <BrandLogo />
-            </div>
-        }
-        <p class="company-name">@Formatter.SafeText(Company.CompanyName)</p>
-        <p class="company-lines">@Formatter.FormatAddress(Company.Address)</p>
-    </section>
+    <div class="brand-block">
+        <p class="eyebrow">@Formatter.SafeText(Company.Eyebrow)</p>
+        <h1>@Formatter.SafeText(Company.CompanyName)</h1>
+        <p class="brand-meta">@Formatter.SafeText(Company.AddressLine)</p>
+        <p class="brand-meta">@BuildContactLine()</p>
+    </div>
 
-    <section>
-        <p class="contact-lines">@BuildCompanyContacts()</p>
-    </section>
-
-    <h1 class="invoice-title">@Formatter.SafeText(Details.Title)</h1>
+    <div class="invoice-meta">
+        <div class="meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">Invoice Number</span>
+                <strong class="meta-value">@Formatter.SafeText(Invoice.InvoiceNumber)</strong>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Issue Date</span>
+                <strong class="meta-value">@Formatter.FormatDate(Invoice.IssueDate)</strong>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Payment Status</span>
+                <strong class="meta-value">@Formatter.SafeText(Invoice.PaymentStatus)</strong>
+            </div>
+        </div>
+    </div>
 </header>
 
 @code {
@@ -31,30 +32,13 @@
     public required CompanyInfoModel Company { get; set; }
 
     [Parameter]
-    public required InvoiceDetailsModel Details { get; set; }
+    public required InvoiceMetaModel Invoice { get; set; }
 
     [Parameter]
     public required InvoiceDisplayFormatter Formatter { get; set; }
 
-    private string BuildCompanyContacts()
+    private string BuildContactLine()
     {
-        var parts = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(Company.Phone))
-        {
-            parts.Add(Company.Phone);
-        }
-
-        if (!string.IsNullOrWhiteSpace(Company.Email))
-        {
-            parts.Add(Company.Email);
-        }
-
-        if (!string.IsNullOrWhiteSpace(Company.Website))
-        {
-            parts.Add(Company.Website);
-        }
-
-        return parts.Count == 0 ? "-" : string.Join("\n", parts);
+        return $"{Formatter.SafeText(Company.Email)} · {Formatter.SafeText(Company.Phone)}";
     }
 }

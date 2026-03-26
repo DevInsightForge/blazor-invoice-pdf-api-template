@@ -1,4 +1,4 @@
-using Bogus;
+﻿using Bogus;
 using InvoicePdf.Templates.Models;
 using InvoicePdf.WebAPI.Application.Abstractions;
 
@@ -6,102 +6,131 @@ namespace InvoicePdf.WebAPI.Domain.Factories;
 
 public sealed class RandomInvoiceDocumentFactory : IInvoiceDocumentFactory
 {
-    private static readonly decimal[] TaxRates = [0m, 5m, 7.5m, 10m, 12.5m, 15m];
-
     private readonly Faker _faker = new();
-    private readonly Faker<AddressInfoModel> _addressFaker;
-    private readonly Faker<PartyInfoModel> _partyFaker;
-    private readonly Faker<InvoiceLineItemModel> _lineItemFaker;
-
-    public RandomInvoiceDocumentFactory()
-    {
-        _addressFaker = new Faker<AddressInfoModel>()
-            .CustomInstantiator(f => new AddressInfoModel
-            {
-                Street1 = f.Address.StreetAddress(),
-                Street2 = f.Random.Bool(0.35f) ? f.Address.SecondaryAddress() : null,
-                City = f.Address.City(),
-                StateOrProvince = f.Address.StateAbbr(),
-                PostalCode = f.Address.ZipCode(),
-                Country = f.Address.CountryCode()
-            });
-
-        _partyFaker = new Faker<PartyInfoModel>()
-            .CustomInstantiator(f => new PartyInfoModel
-            {
-                Name = f.Company.CompanyName(),
-                Address = _addressFaker.Generate()
-            });
-
-        _lineItemFaker = new Faker<InvoiceLineItemModel>()
-            .CustomInstantiator(f =>
-            {
-                var quantity = Round(f.Random.Decimal(1m, 24m));
-                var rate = Round(f.Random.Decimal(35m, 175m));
-                var amount = Round(quantity * rate);
-
-                return new InvoiceLineItemModel
-                {
-                    ProductOrService = f.Commerce.Department(1),
-                    Description = f.Commerce.ProductName(),
-                    Quantity = quantity,
-                    Rate = rate,
-                    Amount = f.Random.Bool(0.2f) ? amount : null
-                };
-            });
-    }
 
     public InvoiceDocumentModel Create()
     {
-        var invoiceDate = DateOnly.FromDateTime(_faker.Date.RecentOffset(10).UtcDateTime);
-        var dueDate = invoiceDate.AddDays(_faker.Random.Int(7, 45));
-        var taxRatePercent = _faker.PickRandom(TaxRates);
-        var shipping = Round(_faker.Random.Decimal(0m, 120m));
-        var company = CreateCompany();
-        var billTo = _partyFaker.Generate();
-        var shipTo = _faker.Random.Bool(0.6f) ? _partyFaker.Generate() : null;
-        var items = _lineItemFaker.Generate(_faker.Random.Int(5, 8));
+        var issueDate = DateOnly.FromDateTime(_faker.Date.RecentOffset(7).UtcDateTime);
+        var shippingDate = issueDate.AddDays(_faker.Random.Int(1, 4));
+        var deliveryDate = shippingDate.AddDays(_faker.Random.Int(1, 4));
+        var lineItems = CreateLineItems(_faker.Random.Int(4, 7));
+        var subtotal = Round(lineItems.Sum(x => x.Amount ?? (x.Quantity * x.UnitPrice)));
+        var taxRate = _faker.PickRandom(new[] { 8.25m, 10m, 12m });
+        var tax = Round(subtotal * (taxRate / 100m));
+        var shipping = Round(_faker.Random.Decimal(15m, 60m));
+        var discount = Round(_faker.Random.Decimal(10m, 180m));
+        var total = Round(subtotal + tax + shipping - discount);
+        var amountPaid = _faker.Random.Bool(0.8f) ? total : Round(total - _faker.Random.Decimal(10m, 150m));
+        var balance = Round(total - amountPaid);
+        var invoiceNumber = $"INV-{issueDate:yyyy}-{_faker.Random.Number(1000, 9999)}";
 
         return new InvoiceDocumentModel
         {
-            Company = company,
-            BillTo = billTo,
-            ShipTo = shipTo,
-            Details = new InvoiceDetailsModel
+            Company = new CompanyInfoModel
             {
-                InvoiceNumber = $"INV-{invoiceDate:yyyyMMdd}-{_faker.Random.Number(100000, 999999)}",
-                InvoiceDate = invoiceDate,
-                Terms = _faker.Random.Bool(0.85f) ? $"Net {_faker.Random.Int(7, 45)}" : null,
-                DueDate = dueDate,
-                Title = "Invoicing"
+                Eyebrow = _faker.PickRandom(new[] { "Paid Invoice", "Invoice" }),
+                CompanyName = _faker.Company.CompanyName(),
+                AddressLine = BuildAddressLine(),
+                Email = _faker.Internet.Email(),
+                Phone = _faker.Phone.PhoneNumber("+1 (###) ###-####")
             },
-            Items = items,
-            Totals = new InvoiceTotalsModel
+            Invoice = new InvoiceMetaModel
             {
-                Subtotal = null,
-                TaxRatePercent = taxRatePercent,
-                SalesTax = null,
+                InvoiceNumber = invoiceNumber,
+                IssueDate = issueDate,
+                PaymentStatus = balance == 0m ? "Paid" : "Partial"
+            },
+            BillTo = new BillToInfoModel
+            {
+                CardLabel = "Bill To",
+                Name = _faker.Company.CompanyName(),
+                Attention = $"Attn: {_faker.Name.JobTitle()}",
+                AddressLine1 = _faker.Address.StreetAddress(),
+                AddressLine2 = _faker.Random.Bool(0.4f) ? _faker.Address.SecondaryAddress() : null,
+                CityStatePostalCountry = BuildCityStateLine(),
+                Email = _faker.Internet.Email()
+            },
+            OrderDetails = new OrderDetailsModel
+            {
+                CardLabel = "Order Details",
+                Name = _faker.Company.CompanyName(),
+                Lines =
+                [
+                    new InvoiceKeyValueModel { Label = "Order Number", Value = $"ORD-{_faker.Random.Number(100000, 999999)}" },
+                    new InvoiceKeyValueModel { Label = "Order Date", Value = _faker.Date.Recent(10).ToString("MMMM dd, yyyy") },
+                    new InvoiceKeyValueModel { Label = "Shipping Method", Value = _faker.PickRandom(new[] { "Express Ground", "Priority", "Standard" }) },
+                    new InvoiceKeyValueModel { Label = "Tracking", Value = $"TRK-{_faker.Random.Number(1000000000, 1999999999)}" },
+                    new InvoiceKeyValueModel { Label = "Delivered", Value = deliveryDate.ToString("MMMM dd, yyyy") }
+                ]
+            },
+            LineItems = lineItems,
+            Summary = new InvoiceSummaryModel
+            {
+                Subtotal = subtotal,
+                TaxRatePercent = taxRate,
+                Tax = tax,
                 Shipping = shipping,
-                Total = null
+                Discount = discount,
+                Total = total,
+                AmountPaid = amountPaid,
+                Balance = balance
             },
-            CustomerMessageTitle = "Customer message",
-            CustomerMessage = _faker.Random.Bool(0.75f) ? _faker.Lorem.Paragraphs(2, "\n\n") : null,
-            CurrencyCode = _faker.Finance.Currency().Code,
+            PaymentReceipt = new PaymentReceiptModel
+            {
+                CardLabel = "Payment Receipt",
+                Lines =
+                [
+                    new InvoiceKeyValueModel { Label = "Payment Method", Value = _faker.PickRandom(new[] { "Corporate Credit Account", "Wire Transfer", "Business Card" }) },
+                    new InvoiceKeyValueModel { Label = "Card Type", Value = _faker.PickRandom(new[] { "Visa Business", "Mastercard Business", "Amex Corporate" }) },
+                    new InvoiceKeyValueModel { Label = "Last 4 Digits", Value = _faker.Random.Number(1000, 9999).ToString() },
+                    new InvoiceKeyValueModel { Label = "Authorization", Value = $"AUTH-{_faker.Random.Number(100000, 999999)}" },
+                    new InvoiceKeyValueModel { Label = "Transaction ID", Value = $"TXN-{issueDate:yyyyMMdd}-{_faker.Random.Number(1000, 9999)}" },
+                    new InvoiceKeyValueModel { Label = "Reference", Value = invoiceNumber }
+                ]
+            },
+            Footer = new InvoiceFooterModel
+            {
+                Line1 = balance == 0m
+                    ? $"Payment received on {issueDate:MMMM dd, yyyy}. This invoice is settled and no outstanding balance remains."
+                    : $"Partial payment recorded on {issueDate:MMMM dd, yyyy}. Remaining balance is due by stated terms.",
+                Line2 = $"{_faker.Company.CompanyName()} LLC · EIN {_faker.Random.Number(10, 99)}-{_faker.Random.Number(1000000, 9999999)}"
+            },
+            CurrencyCode = "USD",
             Locale = "en-US"
         };
     }
 
-    private CompanyInfoModel CreateCompany()
+    private List<InvoiceLineItemModel> CreateLineItems(int count)
     {
-        return new CompanyInfoModel
+        var items = new List<InvoiceLineItemModel>(count);
+
+        for (var i = 1; i <= count; i++)
         {
-            LogoUrl = null,
-            CompanyName = _faker.Company.CompanyName(),
-            Address = _addressFaker.Generate(),
-            Phone = _faker.Phone.PhoneNumber(),
-            Email = _faker.Internet.Email(),
-            Website = _faker.Internet.DomainName()
-        };
+            var quantity = Round(_faker.Random.Decimal(1m, 5m));
+            var unitPrice = Round(_faker.Random.Decimal(89m, 599m));
+            var amount = Round(quantity * unitPrice);
+
+            items.Add(new InvoiceLineItemModel
+            {
+                Id = i.ToString("00"),
+                Description = _faker.Commerce.ProductName(),
+                Quantity = quantity,
+                UnitPrice = unitPrice,
+                Amount = _faker.Random.Bool(0.75f) ? amount : null
+            });
+        }
+
+        return items;
+    }
+
+    private string BuildAddressLine()
+    {
+        return $"{_faker.Address.StreetAddress()}, {_faker.Address.City()}, {_faker.Address.StateAbbr()} {_faker.Address.ZipCode()}";
+    }
+
+    private string BuildCityStateLine()
+    {
+        return $"{_faker.Address.City()}, {_faker.Address.StateAbbr()} {_faker.Address.ZipCode()}, {_faker.Address.Country()}";
     }
 
     private static decimal Round(decimal value)

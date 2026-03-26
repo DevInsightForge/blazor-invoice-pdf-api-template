@@ -1,6 +1,5 @@
 using InvoicePdf.Templates.Models;
 using InvoicePdf.WebAPI.Application.Abstractions;
-using InvoicePdf.WebAPI.Application.Models;
 
 namespace InvoicePdf.WebAPI.Application.Services;
 
@@ -13,17 +12,17 @@ public sealed class InvoicePdfService(
     private readonly IInvoiceHtmlBuilder _invoiceHtmlBuilder = invoiceHtmlBuilder;
     private readonly IPdfGenerator _pdfGenerator = pdfGenerator;
 
-    public async Task<(byte[] Pdf, string FileName)> GenerateAsync(PdfPageFormat pageFormat, CancellationToken cancellationToken)
+    public async Task<(byte[] Pdf, string FileName)> GenerateAsync(CancellationToken cancellationToken)
     {
         var document = _invoiceDocumentFactory.Create();
         var html = await _invoiceHtmlBuilder.BuildAsync(document, cancellationToken);
-        var pdf = await _pdfGenerator.GenerateAsync(html, pageFormat, cancellationToken);
+        var pdf = await _pdfGenerator.GenerateAsync(html, cancellationToken);
         return (pdf, BuildFileName(document));
     }
 
     private static string BuildFileName(InvoiceDocumentModel document)
     {
-        var safeInvoiceNumber = string.Concat(document.Details.InvoiceNumber.Where(char.IsLetterOrDigit));
+        var safeInvoiceNumber = string.Concat(document.Invoice.InvoiceNumber.Where(char.IsLetterOrDigit));
         var invoiceNumber = string.IsNullOrWhiteSpace(safeInvoiceNumber) ? "document" : safeInvoiceNumber;
         return $"invoice-{invoiceNumber}.pdf";
     }

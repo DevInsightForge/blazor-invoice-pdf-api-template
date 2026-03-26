@@ -1,45 +1,77 @@
+@using InvoicePdf.Templates.Models
 @using InvoicePdf.Templates.Utilities
 
-<section class="invoice-bottom">
-    <section>
-        @if (!string.IsNullOrWhiteSpace(CustomerMessage))
+<section class="totals-grid">
+    <div class="note-card">
+        <p class="card-label">@Formatter.SafeText(PaymentReceipt.CardLabel)</p>
+        @foreach (var row in PaymentReceipt.Lines)
         {
-            <h2 class="message-title">@Formatter.SafeText(CustomerMessageTitle)</h2>
-            <p class="message-body">@CustomerMessage</p>
+            <p>@Formatter.SafeText(row.Label): @Formatter.SafeText(row.Value)</p>
         }
-    </section>
+    </div>
 
-    <section>
-        <table class="totals-table">
-            <tbody>
-                <tr><td>Subtotal</td><td>@Formatter.FormatCurrency(Subtotal)</td></tr>
-                <tr><td>Sales tax</td><td>@Formatter.FormatCurrency(SalesTax)</td></tr>
-                <tr><td>Shipping</td><td>@Formatter.FormatCurrency(Shipping)</td></tr>
-                <tr class="total-divider total-row"><td>Total</td><td>@Formatter.FormatCurrency(Total)</td></tr>
-            </tbody>
-        </table>
-    </section>
+    <div class="summary-card">
+        <div class="summary-row">
+            <span>Subtotal</span>
+            <strong>@Formatter.FormatCurrency(Subtotal)</strong>
+        </div>
+        <div class="summary-row">
+            <span>Tax (@TaxRateText)</span>
+            <strong>@Formatter.FormatCurrency(Tax)</strong>
+        </div>
+        <div class="summary-row">
+            <span>Shipping</span>
+            <strong>@Formatter.FormatCurrency(Shipping)</strong>
+        </div>
+        <div class="summary-row">
+            <span>Discount</span>
+            <strong>-@Formatter.FormatCurrency(Discount)</strong>
+        </div>
+        <div class="summary-total">
+            <span>Invoice Total</span>
+            <strong>@Formatter.FormatCurrency(Total)</strong>
+        </div>
+        <div class="summary-row">
+            <span>Amount Paid</span>
+            <strong>@Formatter.FormatCurrency(AmountPaid)</strong>
+        </div>
+        <div class="summary-row">
+            <span>Balance</span>
+            <strong>@Formatter.FormatCurrency(Balance)</strong>
+        </div>
+    </div>
 </section>
 
 @code {
     [Parameter]
-    public string? CustomerMessageTitle { get; set; }
+    public required PaymentReceiptModel PaymentReceipt { get; set; }
 
     [Parameter]
-    public string? CustomerMessage { get; set; }
+    public required InvoiceDisplayFormatter Formatter { get; set; }
 
     [Parameter]
     public decimal Subtotal { get; set; }
 
     [Parameter]
-    public decimal SalesTax { get; set; }
+    public decimal Tax { get; set; }
 
     [Parameter]
     public decimal Shipping { get; set; }
 
     [Parameter]
+    public decimal Discount { get; set; }
+
+    [Parameter]
     public decimal Total { get; set; }
 
     [Parameter]
-    public required InvoiceDisplayFormatter Formatter { get; set; }
+    public decimal AmountPaid { get; set; }
+
+    [Parameter]
+    public decimal Balance { get; set; }
+
+    [Parameter]
+    public decimal? TaxRatePercent { get; set; }
+
+    private string TaxRateText => TaxRatePercent.HasValue ? $"{Formatter.FormatNumber(TaxRatePercent.Value)}%" : "0%";
 }

@@ -1,4 +1,4 @@
-using System.Globalization;
+using Bogus;
 using InvoicePdf.Templates.Models;
 using InvoicePdf.WebAPI.Application.Abstractions;
 
@@ -6,90 +6,102 @@ namespace InvoicePdf.WebAPI.Domain.Factories;
 
 public sealed class RandomInvoiceDocumentFactory : IInvoiceDocumentFactory
 {
+    private static readonly decimal[] TaxRates = [0m, 5m, 7.5m, 10m, 12.5m, 15m];
+
+    private readonly Faker _faker = new();
+    private readonly Faker<AddressInfoModel> _addressFaker;
+    private readonly Faker<PartyInfoModel> _partyFaker;
+    private readonly Faker<InvoiceLineItemModel> _lineItemFaker;
+
+    public RandomInvoiceDocumentFactory()
+    {
+        _addressFaker = new Faker<AddressInfoModel>()
+            .CustomInstantiator(f => new AddressInfoModel
+            {
+                Street1 = f.Address.StreetAddress(),
+                Street2 = f.Random.Bool(0.35f) ? f.Address.SecondaryAddress() : null,
+                City = f.Address.City(),
+                StateOrProvince = f.Address.StateAbbr(),
+                PostalCode = f.Address.ZipCode(),
+                Country = f.Address.CountryCode()
+            });
+
+        _partyFaker = new Faker<PartyInfoModel>()
+            .CustomInstantiator(f => new PartyInfoModel
+            {
+                Name = f.Company.CompanyName(),
+                Address = _addressFaker.Generate()
+            });
+
+        _lineItemFaker = new Faker<InvoiceLineItemModel>()
+            .CustomInstantiator(f =>
+            {
+                var quantity = Round(f.Random.Decimal(1m, 24m));
+                var rate = Round(f.Random.Decimal(35m, 175m));
+                var amount = Round(quantity * rate);
+
+                return new InvoiceLineItemModel
+                {
+                    ProductOrService = f.Commerce.Department(1),
+                    Description = f.Commerce.ProductName(),
+                    Quantity = quantity,
+                    Rate = rate,
+                    Amount = f.Random.Bool(0.2f) ? amount : null
+                };
+            });
+    }
+
     public InvoiceDocumentModel Create()
     {
-        var issueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-Random.Shared.Next(0, 7));
-        var dueDate = issueDate.AddDays(Random.Shared.Next(7, 45));
-        var currencyCode = CreateUpperToken(3);
-        var items = CreateLineItems();
-        var subtotal = Round(items.Sum(x => x.LineSubtotal));
-        var taxTotal = Round(items.Sum(x => x.LineTax));
-        var grandTotal = Round(subtotal + taxTotal);
+        var invoiceDate = DateOnly.FromDateTime(_faker.Date.RecentOffset(10).UtcDateTime);
+        var dueDate = invoiceDate.AddDays(_faker.Random.Int(7, 45));
+        var taxRatePercent = _faker.PickRandom(TaxRates);
+        var shipping = Round(_faker.Random.Decimal(0m, 120m));
+        var company = CreateCompany();
+        var billTo = _partyFaker.Generate();
+        var shipTo = _faker.Random.Bool(0.6f) ? _partyFaker.Generate() : null;
+        var items = _lineItemFaker.Generate(_faker.Random.Int(5, 8));
 
-        return new InvoiceDocumentModel(
-            InvoiceNumber: $"INV-{issueDate:yyyyMMdd}-{Random.Shared.Next(100000, 999999)}",
-            IssueDate: issueDate,
-            DueDate: dueDate,
-            CurrencyCode: currencyCode,
-            Seller: CreateParty("SELLER"),
-            Buyer: CreateParty("BUYER"),
-            LineItems: items,
-            Subtotal: subtotal,
-            TaxTotal: taxTotal,
-            GrandTotal: grandTotal,
-            PaymentTerms: $"Net {Random.Shared.Next(7, 46)}",
-            Notes: $"Generated at {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} UTC");
-    }
-
-    private static InvoicePartyModel CreateParty(string role)
-    {
-        var nameToken = CreateUpperToken(6);
-        return new InvoicePartyModel(
-            Name: $"{role}-{CreateUpperToken(4)} {nameToken}",
-            AddressLine1: $"{Random.Shared.Next(10, 9999)} {CreateUpperToken(8)} Street",
-            AddressLine2: $"Suite {Random.Shared.Next(1, 90)}",
-            City: $"City-{CreateUpperToken(5)}",
-            Country: $"Country-{CreateUpperToken(3)}",
-            Email: $"{role.ToLowerInvariant()}-{nameToken.ToLowerInvariant()}@{CreateLowerToken(5)}.{CreateLowerToken(3)}");
-    }
-
-    private static IReadOnlyList<InvoiceLineItemModel> CreateLineItems()
-    {
-        var count = Random.Shared.Next(2, 7);
-        var items = new List<InvoiceLineItemModel>(count);
-
-        for (var index = 0; index < count; index++)
+        return new InvoiceDocumentModel
         {
-            var quantity = Round((decimal)(Random.Shared.NextDouble() * 20d) + 1m);
-            var unitPrice = Round((decimal)(Random.Shared.NextDouble() * 1200d) + 50m);
-            var taxRate = Random.Shared.Next(0, 4) * 5m;
-            var subtotal = Round(quantity * unitPrice);
-            var tax = Round(subtotal * (taxRate / 100m));
-            var total = Round(subtotal + tax);
-
-            items.Add(new InvoiceLineItemModel(
-                Description: $"Service-{CreateUpperToken(5)}-{index + 1}",
-                Quantity: quantity,
-                UnitPrice: unitPrice,
-                TaxRate: taxRate,
-                LineSubtotal: subtotal,
-                LineTax: tax,
-                LineTotal: total));
-        }
-
-        return items;
-    }
-
-    private static string CreateUpperToken(int length)
-    {
-        return string.Create(length, 0, static (span, _) =>
-        {
-            for (var index = 0; index < span.Length; index++)
+            Company = company,
+            BillTo = billTo,
+            ShipTo = shipTo,
+            Details = new InvoiceDetailsModel
             {
-                span[index] = (char)('A' + Random.Shared.Next(0, 26));
-            }
-        });
+                InvoiceNumber = $"INV-{invoiceDate:yyyyMMdd}-{_faker.Random.Number(100000, 999999)}",
+                InvoiceDate = invoiceDate,
+                Terms = _faker.Random.Bool(0.85f) ? $"Net {_faker.Random.Int(7, 45)}" : null,
+                DueDate = dueDate,
+                Title = "Invoicing"
+            },
+            Items = items,
+            Totals = new InvoiceTotalsModel
+            {
+                Subtotal = null,
+                TaxRatePercent = taxRatePercent,
+                SalesTax = null,
+                Shipping = shipping,
+                Total = null
+            },
+            CustomerMessageTitle = "Customer message",
+            CustomerMessage = _faker.Random.Bool(0.75f) ? _faker.Lorem.Paragraphs(2, "\n\n") : null,
+            CurrencyCode = _faker.Finance.Currency().Code,
+            Locale = "en-US"
+        };
     }
 
-    private static string CreateLowerToken(int length)
+    private CompanyInfoModel CreateCompany()
     {
-        return string.Create(length, 0, static (span, _) =>
+        return new CompanyInfoModel
         {
-            for (var index = 0; index < span.Length; index++)
-            {
-                span[index] = (char)('a' + Random.Shared.Next(0, 26));
-            }
-        });
+            LogoUrl = null,
+            CompanyName = _faker.Company.CompanyName(),
+            Address = _addressFaker.Generate(),
+            Phone = _faker.Phone.PhoneNumber(),
+            Email = _faker.Internet.Email(),
+            Website = _faker.Internet.DomainName()
+        };
     }
 
     private static decimal Round(decimal value)

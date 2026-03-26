@@ -1,4 +1,4 @@
-using InvoicePdf.Templates.Components;
+using InvoicePdf.Templates.Components.Invoice;
 using InvoicePdf.Templates.Models;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;

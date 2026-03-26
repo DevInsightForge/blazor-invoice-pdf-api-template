@@ -10,7 +10,6 @@ public sealed class InvoiceHtmlBuilder(IComponentHtmlRenderer componentHtmlRende
 
     public async Task<string> BuildAsync(InvoiceDocumentModel document, CancellationToken cancellationToken = default)
     {
-        var body = await _componentHtmlRenderer.RenderInvoiceDocumentAsync(document, cancellationToken);
-        return InvoiceHtmlDocumentComposer.Compose(body, document.InvoiceNumber);
+        return await _componentHtmlRenderer.RenderInvoiceDocumentAsync(document, cancellationToken);
     }
 }

@@ -22,7 +22,7 @@ public sealed class InvoicePdfService(
 
     private static string BuildFileName(InvoiceDocumentModel document)
     {
-        var safeInvoiceNumber = string.Concat(document.InvoiceNumber.Where(char.IsLetterOrDigit));
+        var safeInvoiceNumber = string.Concat(document.Details.InvoiceNumber.Where(char.IsLetterOrDigit));
         var invoiceNumber = string.IsNullOrWhiteSpace(safeInvoiceNumber) ? "document" : safeInvoiceNumber;
         return $"invoice-{invoiceNumber}.pdf";
     }

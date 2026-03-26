@@ -1,5 +1,7 @@
 using InvoicePdf.WebAPI.Application.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace InvoicePdf.WebAPI.Endpoints;
 
@@ -15,9 +17,37 @@ public static class InvoicePdfEndpoint
         return endpoints;
     }
 
-    private static async Task<FileContentHttpResult> GeneratePdfAsync(InvoicePdfService service, CancellationToken cancellationToken)
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> GeneratePdfAsync(InvoicePdfService service, CancellationToken cancellationToken)
     {
-        var (pdf, fileName) = await service.GenerateAsync(cancellationToken);
-        return TypedResults.File(pdf, "application/pdf", fileName);
+        try
+        {
+            var (pdf, fileName) = await service.GenerateAsync(cancellationToken);
+            return TypedResults.File(pdf, "application/pdf", fileName);
+        }
+        catch (Exception ex) when (IsPoolUnavailable(ex))
+        {
+            return TypedResults.Problem(
+                title: "PDF engine unavailable",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (Exception ex) when (IsAcquireTimeout(ex))
+        {
+            return TypedResults.Problem(
+                title: "PDF generation timeout",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+    }
+
+    private static bool IsPoolUnavailable(Exception exception)
+    {
+        var name = exception.GetType().Name;
+        return name is "PagePoolUnavailableException" or "PagePoolCircuitOpenException" or "PagePoolDisposedException";
+    }
+
+    private static bool IsAcquireTimeout(Exception exception)
+    {
+        return exception.GetType().Name == "PagePoolAcquireTimeoutException";
     }
 }

@@ -1,0 +1,36 @@
+@using InvoicePdf.Templates.Models
+@using InvoicePdf.Templates.Utilities
+
+<section>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Product/ service</th>
+                <th>Description</th>
+                <th class="right">Quantity/ hrs</th>
+                <th class="right">Rate</th>
+                <th class="right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items)
+            {
+                <tr>
+                    <td><span class="item-primary">@Formatter.SafeText(item.ProductOrService)</span></td>
+                    <td><span class="item-secondary">@Formatter.SafeText(item.Description)</span></td>
+                    <td class="right">@Formatter.FormatNumber(item.Quantity)</td>
+                    <td class="right">@Formatter.FormatCurrency(item.Rate)</td>
+                    <td class="right">@Formatter.FormatCurrency(InvoiceCalculations.GetLineAmount(item))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<InvoiceLineItemModel> Items { get; set; }
+
+    [Parameter]
+    public required InvoiceDisplayFormatter Formatter { get; set; }
+}

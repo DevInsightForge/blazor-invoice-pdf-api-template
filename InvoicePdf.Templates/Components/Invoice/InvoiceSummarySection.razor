@@ -1,0 +1,45 @@
+@using InvoicePdf.Templates.Utilities
+
+<section class="invoice-bottom">
+    <section>
+        @if (!string.IsNullOrWhiteSpace(CustomerMessage))
+        {
+            <h2 class="message-title">@Formatter.SafeText(CustomerMessageTitle)</h2>
+            <p class="message-body">@CustomerMessage</p>
+        }
+    </section>
+
+    <section>
+        <table class="totals-table">
+            <tbody>
+                <tr><td>Subtotal</td><td>@Formatter.FormatCurrency(Subtotal)</td></tr>
+                <tr><td>Sales tax</td><td>@Formatter.FormatCurrency(SalesTax)</td></tr>
+                <tr><td>Shipping</td><td>@Formatter.FormatCurrency(Shipping)</td></tr>
+                <tr class="total-divider total-row"><td>Total</td><td>@Formatter.FormatCurrency(Total)</td></tr>
+            </tbody>
+        </table>
+    </section>
+</section>
+
+@code {
+    [Parameter]
+    public string? CustomerMessageTitle { get; set; }
+
+    [Parameter]
+    public string? CustomerMessage { get; set; }
+
+    [Parameter]
+    public decimal Subtotal { get; set; }
+
+    [Parameter]
+    public decimal SalesTax { get; set; }
+
+    [Parameter]
+    public decimal Shipping { get; set; }
+
+    [Parameter]
+    public decimal Total { get; set; }
+
+    [Parameter]
+    public required InvoiceDisplayFormatter Formatter { get; set; }
+}

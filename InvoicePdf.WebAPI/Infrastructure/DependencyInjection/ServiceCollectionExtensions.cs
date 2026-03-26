@@ -3,6 +3,7 @@ using InvoicePdf.WebAPI.Application.Abstractions;
 using InvoicePdf.WebAPI.Application.Services;
 using InvoicePdf.WebAPI.Domain.Factories;
 using InvoicePdf.WebAPI.Infrastructure.Pdf;
+using Microsoft.Extensions.Options;
 using PuppeteerPagePool;
 using PuppeteerSharp;
 
@@ -13,7 +14,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInvoicePdfTemplate(this IServiceCollection services)
     {
         services.AddSingleton<IComponentHtmlRenderer, ComponentHtmlRenderer>();
-        services.AddSingleton<IInvoiceDocumentFactory, RandomInvoiceDocumentFactory>();
+        services.AddOptions<PdfRenderOptions>()
+            .BindConfiguration(PdfRenderOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddTransient<IInvoiceDocumentFactory, RandomInvoiceDocumentFactory>();
         services.AddSingleton<IInvoiceHtmlBuilder, InvoiceHtmlBuilder>();
         services.AddSingleton<InvoicePdfService>();
         services.AddSingleton<IPdfGenerator, PuppeteerPagePoolPdfGenerator>();

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="InvoicePdf.Templates/InvoicePdf.Templates.csproj" />
+  <Project Path="InvoicePdf.WebAPI/InvoicePdf.WebAPI.csproj" />
+</Solution>

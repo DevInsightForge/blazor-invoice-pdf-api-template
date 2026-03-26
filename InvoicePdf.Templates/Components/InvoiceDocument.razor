@@ -1,0 +1,120 @@
+@using System.Globalization
+@using InvoicePdf.Templates.Models
+
+<div class="invoice">
+    <div class="header">
+        <div>
+            <h1>Billing Invoice</h1>
+            <p class="muted">Invoice #@Model.InvoiceNumber</p>
+        </div>
+        <div class="text-right">
+            <p><strong>Issue Date:</strong> @FormatDate(Model.IssueDate)</p>
+            <p><strong>Due Date:</strong> @FormatDate(Model.DueDate)</p>
+            <p><strong>Currency:</strong> @Model.CurrencyCode</p>
+        </div>
+    </div>
+
+    <div class="party-grid">
+        <div>
+            <p class="section-title">From</p>
+            <p><strong>@Model.Seller.Name</strong></p>
+            <p>@Model.Seller.AddressLine1</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Seller.AddressLine2))
+            {
+                <p>@Model.Seller.AddressLine2</p>
+            }
+            <p>@Model.Seller.City, @Model.Seller.Country</p>
+            <p>@Model.Seller.Email</p>
+        </div>
+        <div>
+            <p class="section-title">Bill To</p>
+            <p><strong>@Model.Buyer.Name</strong></p>
+            <p>@Model.Buyer.AddressLine1</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Buyer.AddressLine2))
+            {
+                <p>@Model.Buyer.AddressLine2</p>
+            }
+            <p>@Model.Buyer.City, @Model.Buyer.Country</p>
+            <p>@Model.Buyer.Email</p>
+        </div>
+    </div>
+
+    <div class="meta-grid">
+        <div>
+            <p class="section-title">Payment Terms</p>
+            <p>@(string.IsNullOrWhiteSpace(Model.PaymentTerms) ? "Due on receipt" : Model.PaymentTerms)</p>
+        </div>
+        <div class="text-right">
+            <p class="section-title">Status</p>
+            <p>Pending</p>
+        </div>
+    </div>
+
+    <table style="margin-top: 24px;">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Tax %</th>
+                <th class="text-right">Line Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.LineItems)
+            {
+                <tr>
+                    <td>@item.Description</td>
+                    <td class="text-right">@FormatNumber(item.Quantity)</td>
+                    <td class="text-right">@FormatMoney(item.UnitPrice)</td>
+                    <td class="text-right">@FormatNumber(item.TaxRate)</td>
+                    <td class="text-right">@FormatMoney(item.LineTotal)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <table class="totals">
+        <tbody>
+            <tr>
+                <td>Subtotal</td>
+                <td class="text-right">@FormatMoney(Model.Subtotal)</td>
+            </tr>
+            <tr>
+                <td>Tax Total</td>
+                <td class="text-right">@FormatMoney(Model.TaxTotal)</td>
+            </tr>
+            <tr>
+                <td>Grand Total</td>
+                <td class="text-right">@FormatMoney(Model.GrandTotal)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Notes))
+    {
+        <div class="footer">
+            <p>@Model.Notes</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public required InvoiceDocumentModel Model { get; set; }
+
+    private string FormatDate(DateOnly value)
+    {
+        return value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
+
+    private string FormatMoney(decimal value)
+    {
+        return $"{Model.CurrencyCode} {value.ToString("0.00", CultureInfo.InvariantCulture)}";
+    }
+
+    private static string FormatNumber(decimal value)
+    {
+        return value.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+}

@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/Chromium/
+.vs/
+*.user
+*.suo
+*.cache
+*.pdb
+*.nupkg
+TestResults/
+invoice-test.pdf
